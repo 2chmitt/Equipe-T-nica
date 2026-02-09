@@ -48,7 +48,7 @@ app.mount(
 # =========================
 # HOME
 # =========================
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def home():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
@@ -522,3 +522,4 @@ def gerar_extrato_12m(req: Extrato12mRequest):
     }
 
     return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
+
