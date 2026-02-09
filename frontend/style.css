@@ -1,0 +1,230 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+}
+
+/* HEADER */
+.topbar {
+  background: linear-gradient(90deg, #000814, #003566);
+  color: #fff;
+  padding: 20px;
+}
+
+.topbar-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.logo { height: 40px; }
+
+/* LAYOUT */
+.page {
+  max-width: 950px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* CARDS */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+}
+
+.form-card { border-left: 6px solid #003566; }
+.resultado-card { border-left: 6px solid #000; }
+.historico-card { border-left: 6px solid #003566; }
+
+/* FORM */
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+label {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+input {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #cfd6e4;
+  font-size: 14px;
+  outline: none;
+}
+
+input:focus {
+  border-color: #003566;
+  box-shadow: 0 0 0 3px rgba(0, 53, 102, 0.12);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+button {
+  background: #0033a0;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+button.disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* STATUS */
+.status {
+  margin-top: 12px;
+  color: #003566;
+  font-weight: 700;
+}
+
+.hidden { display: none; }
+
+/* RESULTADO */
+.linha-info { margin-bottom: 10px; }
+
+/* BLOCO VALOR (alinhamento perfeito) */
+.bloco-valor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #eef2f7;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+
+/* esquerda: chave + valor alinhados */
+.bloco-left {
+  display: grid;
+  grid-template-columns: 120px 1fr; /* 🔥 garante alinhamento */
+  align-items: center;
+  column-gap: 14px;
+}
+
+/* "fpm:" "royalties:" "todos:" */
+.chave {
+  font-weight: 800;
+  text-transform: lowercase;
+}
+
+/* valor */
+.valor {
+  font-size: 20px;
+  font-weight: 800;
+  text-align: left;
+}
+
+/* botão copiar */
+.btn-copy {
+  background: #0033a0;
+  padding: 8px 14px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.btn-copy.copiado {
+  background: #2ecc71;
+}
+
+/* HISTÓRICO */
+.historico-card li {
+  background: #eef2f7;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.historico-card li:hover { background: #dce6f5; }
+
+/* AUTOCOMPLETE */
+.autocomplete { position: relative; }
+
+.sugestoes {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #cfd6e4;
+  border-radius: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 20;
+  display: none;
+}
+
+.sugestoes li {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.sugestoes li:hover { background: #dde7f5; }
+
+/* mantém TODO o CSS anterior */
+
+.acoes {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-copy {
+  background: #0033a0;
+  color: #fff;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.btn-copy.copiado {
+  background: #2ecc71;
+}
+
+/* FOOTER */
+.footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: #666;
+}
+
+/* MENU HEADER */
+.menu {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+}
+
+.menu-link {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+}
+
+.menu-link:hover {
+  background: rgba(255,255,255,0.18);
+}
+
+.menu-link.ativo {
+  background: rgba(255,255,255,0.30);
+}

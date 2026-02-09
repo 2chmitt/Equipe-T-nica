@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gerar Extratos</title>
+
+  <link rel="icon" type="image/png" href="/static/imagem1.png" />
+  <link rel="apple-touch-icon" href="/static/imagem1.png" />
+
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="topbar-content">
+    <img src="/static/imagem1.png" class="logo" alt="Logo" />
+    <h1>Demonstrativos do GabrielPatinhos22</h1>
+        <nav class="menu">
+            <a href="/" class="menu-link">Consulta</a>
+            <a href="/extratos" class="menu-link ativo">Extratos</a>
+            <a href="/extratos-12m" class="menu-link">12 meses</a>
+        </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <section class="card form-card">
+    <h2>Gerar Extrato (PDF)</h2>
+
+  <form id="extratoForm">
+
+  <div class="field">
+    <label>Tipo</label>
+    <select id="tipo">
+      <option value="fpm">FPM</option>
+      <option value="royalties">Royalties</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Decêndio</label>
+    <select id="decendio">
+    <option value="1°">1°</option>
+    <option value="2°">2°</option>
+    <option value="3°">3°</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Data inicial</label>
+    <input type="date" id="data_inicio" />
+  </div>
+
+  <div class="field">
+    <label>Data final</label>
+    <input type="date" id="data_fim" />
+  </div>
+
+  <div class="actions">
+    <button type="submit" id="btnGerar">Gerar ZIP (todos os municípios)</button>
+  </div>
+
+  <div id="status" class="status hidden">Gerando extratos… (pode demorar)</div>
+  </form>
+  </section>
+
+  <section class="card historico-card">
+    <h2>Histórico <span class="hint">(somente registro)</span></h2>
+    <ul id="historico"></ul>
+  </section>
+
+</main>
+
+<footer class="footer">
+  © copyright by <strong>gabrielpatinhos22</strong>
+</footer>
+
+<script src="/static/extratos.js"></script>
+</body>
+</html>
