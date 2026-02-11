@@ -57,19 +57,34 @@ def home():
 # =========================
 @app.get("/municipios")
 def buscar_municipios(q: str = Query(min_length=2)):
-    q = q.upper()
+    termo = q.strip().upper()
 
-    resultados = [
-        {
+    resultados_inicio = []
+    resultados_contem = []
+
+    for m in MUNICIPIOS:
+        nome = m["nomeBeneficiarioSaida"].upper()
+
+        item = {
             "codigo": m["codigoBeneficiarioSaida"],
             "municipio": m["nomeBeneficiarioSaida"],
             "uf": m["siglaUnidadeFederacaoSaida"]
         }
-        for m in MUNICIPIOS
-        if q in m["nomeBeneficiarioSaida"].upper()
-    ][:10]
 
-    return resultados
+        # Prioridade 1: começa com o termo
+        if nome.startswith(termo):
+            resultados_inicio.append(item)
+
+        # Prioridade 2: contém o termo
+        elif termo in nome:
+            resultados_contem.append(item)
+
+    # junta (começa primeiro)
+    resultados = resultados_inicio + resultados_contem
+
+    # aumenta limite (recomendado 50)
+    return resultados[:50]
+
 
 # =========================
 # CONFIG BB
