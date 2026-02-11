@@ -336,6 +336,18 @@ class ExtratoLoteRequest(BaseModel):
     data_inicio: str
     data_fim: str
 
+def mes_ano_extenso_por_data(data_str: str):
+    # data_str no formato "dd.mm.yyyy"
+    meses_pt = [
+        "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+        "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
+    ]
+
+    dia, mes, ano = data_str.split(".")
+    mes_nome = meses_pt[int(mes) - 1]
+    return mes_nome, ano
+
+
 @app.post("/extratos/gerar")
 def gerar_extrato_lote(req: ExtratoLoteRequest):
 
@@ -345,12 +357,17 @@ def gerar_extrato_lote(req: ExtratoLoteRequest):
         codigo_fundo = 4
         titulo_fundo = "FPM - FUNDO DE PARTICIPACAO DOS MUNICIPIOS"
         municipios = MUNICIPIOS_FPM_EXTRATO
+
     elif tipo == "royalties":
         codigo_fundo = 28
         titulo_fundo = "ANP   - ROYALTIES DA ANP"
         municipios = MUNICIPIOS_ROYALTIES_EXTRATO
+
     else:
         return {"erro": "Tipo inválido"}
+
+    # 🔥 pega o mês/ano do período (igual sua foto)
+    mes_nome, ano_nome = mes_ano_extenso_por_data(req.data_inicio)
 
     # ZIP em memória
     zip_buffer = BytesIO()
@@ -366,17 +383,25 @@ def gerar_extrato_lote(req: ExtratoLoteRequest):
 
             data_bb = consultar_bb(codigo, codigo_fundo, req.data_inicio, req.data_fim)
 
-            # Se não tiver dados, pula (não quebra o ZIP)
+            # Se não tiver dados, pula
             if not data_bb or not data_bb.get("quantidadeOcorrencia"):
                 continue
 
             pdf_buffer = gerar_pdf_formatado_com_estilo(data_bb, titulo_fundo)
 
-            # nome do arquivo
+            # =========================
+            # 🔥 NOME DO ARQUIVO (CORRETO)
+            # =========================
             if tipo == "fpm":
-                nome_pdf = f"{req.decendio} Decendio - {municipio} ({uf}) ({coef} Coef.).pdf"
+                # ex: 2° Decêndio de JANEIRO DE 2026 - ALVARAES (AM) (1,4 Coef.).pdf
+                if coef:
+                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}) ({coef} Coef.).pdf"
+                else:
+                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}).pdf"
+
             else:
-                nome_pdf = f"{req.decendio} Parcela dos ROYALTIES - {municipio} ({uf}).pdf"
+                # royalties não tem coef
+                nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}).pdf"
 
             nome_pdf = nome_pdf.replace("/", "-")
 
@@ -387,7 +412,7 @@ def gerar_extrato_lote(req: ExtratoLoteRequest):
 
     # nome do ZIP
     agora = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    nome_zip = f"EXTRATOS_{tipo.upper()}_{req.decendio}_{agora}.zip"
+    nome_zip = f"EXTRATOS_{tipo.upper()}_{mes_nome}_{ano_nome}_{req.decendio}_{agora}.zip"
     nome_zip = nome_zip.replace("/", "-").replace(" ", "_")
 
     headers = {
@@ -522,4 +547,3 @@ def gerar_extrato_12m(req: Extrato12mRequest):
     }
 
     return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
-
