@@ -228,3 +228,20 @@ button.disabled {
 .menu-link.ativo {
   background: rgba(255,255,255,0.30);
 }
+
+/* ===== SELECT TIPO EXTRATO (CORRIGIDO) ===== */
+.select-tipo {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #cfd6e4;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.select-tipo:focus {
+  border-color: #003566;
+  box-shadow: 0 0 0 3px rgba(0, 53, 102, 0.12);
+}
