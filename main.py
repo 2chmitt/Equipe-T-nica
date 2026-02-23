@@ -500,14 +500,75 @@ def gerar_datas_por_mes(mes_inicio: str, mes_fim: str):
 # =========================
 class Extrato12mRequest(BaseModel):
     tipo: str          # "fpm" ou "royalties"
-    decendio: str      # "1°", "2°", "3°"
-
     mes_inicio: str    # "2024-09"
     mes_fim: str       # "2025-08"
 
     codigo: int
     municipio: str
     uf: str
+
+# =========================
+# NOVA PÁGINA: /extratos-12m
+# =========================
+@app.get("/extratos-12m")
+def extratos_12m_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "extratos_12m.html"))
+
+# =========================
+# GERA LISTA DE MESES ENTRE YYYY-MM e YYYY-MM
+# =========================
+def gerar_datas_por_mes(mes_inicio: str, mes_fim: str):
+    meses_pt = [
+        "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+        "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
+    ]
+
+    ano_i, mes_i = mes_inicio.split("-")
+    ano_f, mes_f = mes_fim.split("-")
+
+    ano_i = int(ano_i)
+    mes_i = int(mes_i)
+    ano_f = int(ano_f)
+    mes_f = int(mes_f)
+
+    datas = []
+    ano_atual = ano_i
+    mes_atual = mes_i
+
+    while (ano_atual < ano_f) or (ano_atual == ano_f and mes_atual <= mes_f):
+
+        inicio_mes = datetime(ano_atual, mes_atual, 1)
+        _, ultimo_dia = calendar.monthrange(ano_atual, mes_atual)
+        fim_mes = datetime(ano_atual, mes_atual, ultimo_dia)
+
+        data_inicio = inicio_mes.strftime("%d.%m.%Y")
+        data_fim = fim_mes.strftime("%d.%m.%Y")
+
+        nome_mes = meses_pt[mes_atual - 1]
+        label = f"{nome_mes} DE {ano_atual}"
+
+        datas.append((label, data_inicio, data_fim))
+
+        if mes_atual == 12:
+            mes_atual = 1
+            ano_atual += 1
+        else:
+            mes_atual += 1
+
+    return datas
+
+
+# =========================
+# REQUEST 12M
+# =========================
+class Extrato12mRequest(BaseModel):
+    tipo: str
+    mes_inicio: str
+    mes_fim: str
+    codigo: int
+    municipio: str
+    uf: str
+
 
 # =========================
 # GERAR 12 MESES (ZIP)
@@ -528,37 +589,59 @@ def gerar_extrato_12m(req: Extrato12mRequest):
 
     datas = gerar_datas_por_mes(req.mes_inicio, req.mes_fim)
 
-    # regra: precisa ser exatamente 12 meses
     if len(datas) != 12:
         return {"erro": f"O período deve ter exatamente 12 meses. Você selecionou {len(datas)} mês(es)."}
+
+    meses_abrev = [
+        "jan", "fev", "mar", "abr", "mai", "jun",
+        "jul", "ago", "set", "out", "nov", "dez"
+    ]
 
     zip_buffer = BytesIO()
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
 
-        for label, data_inicio, data_fim in datas:
+        for index, (label, data_inicio, data_fim) in enumerate(datas, start=1):
 
             data_bb = consultar_bb(req.codigo, codigo_fundo, data_inicio, data_fim)
 
-            # se não tiver dados, pula
             if not data_bb or not data_bb.get("quantidadeOcorrencia"):
                 continue
 
             pdf_buffer = gerar_pdf_formatado_com_estilo(data_bb, titulo_fundo)
 
-            nome_pdf = f"{req.decendio} Decêndio de {label} - {req.municipio} ({req.uf}).pdf"
-            nome_pdf = nome_pdf.replace("/", "-")
+            # extrai mês e ano
+            dia, mes, ano = data_inicio.split(".")
+            mes_formatado = meses_abrev[int(mes) - 1]
+            ano_curto = ano[-2:]
+
+            # nome interno do PDF
+            nome_pdf = f"{index}- {req.municipio} ({req.uf}) - {mes_formatado}-{ano_curto}.pdf"
 
             zipf.writestr(nome_pdf, pdf_buffer.getvalue())
 
     zip_buffer.seek(0)
 
-    agora = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    nome_zip = f"EXTRATO_12M_{tipo.upper()}_{req.municipio}_{req.mes_inicio}_ATE_{req.mes_fim}_{agora}.zip"
-    nome_zip = nome_zip.replace("/", "-").replace(" ", "_")
+    # =========================
+    # NOME DO ZIP (PADRÃO FINAL)
+    # =========================
+    ano_i, mes_i = req.mes_inicio.split("-")
+    ano_f, mes_f = req.mes_fim.split("-")
+
+    periodo_inicio = f"{mes_i}/{ano_i}"
+    periodo_fim = f"{mes_f}/{ano_f}"
+
+    nome_zip = f"Extratos {tipo.upper()} - {req.municipio} ({req.uf}) - {periodo_inicio} a {periodo_fim}.zip"
+
+    # Windows não permite "/"
+    nome_zip = nome_zip.replace("/", "-")
 
     headers = {
         "Content-Disposition": f'attachment; filename="{nome_zip}"'
     }
 
-    return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers=headers
+    )
