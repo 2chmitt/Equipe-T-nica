@@ -25,7 +25,7 @@ function renderHistorico() {
 
   historico.forEach(h => {
     const li = document.createElement("li");
-    li.textContent = `${h.tipo.toUpperCase()} | ${h.municipio} (${h.uf}) | ${h.periodo} | ${h.decendio} | ${h.quando}`;
+    li.textContent = `${h.tipo.toUpperCase()} | ${h.municipio} (${h.uf}) | ${h.periodo} | ${h.quando}`;
     historicoEl.appendChild(li);
   });
 }
@@ -116,11 +116,9 @@ document.addEventListener("DOMContentLoaded", () => {
     statusEl.classList.remove("hidden");
 
     const tipo = document.getElementById("tipo").value;
-    const decendio = document.getElementById("decendio").value;
 
     const payload = {
       tipo,
-      decendio,
       mes_inicio: mesInicio,
       mes_fim: mesFim,
       codigo: Number(codigoHidden.value),
@@ -150,16 +148,28 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // download ZIP
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "extrato_12m.zip";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+        // 🔥 pega nome do header enviado pelo backend
+        const contentDisposition = res.headers.get("content-disposition");
+
+        let nomeArquivo = "extrato.zip"; // fallback
+
+        if (contentDisposition && contentDisposition.includes("filename=")) {
+          const match = contentDisposition.match(/filename="(.+)"/);
+          if (match && match[1]) {
+            nomeArquivo = match[1];
+          }
+        }
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = nomeArquivo;   // ✅ agora usa o nome do backend
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
 
       // histórico
       salvarHistorico({
@@ -167,7 +177,6 @@ document.addEventListener("DOMContentLoaded", () => {
         municipio: payload.municipio,
         uf: payload.uf,
         periodo: `${mesInicio} até ${mesFim}`,
-        decendio: decendio,
         quando: formatarDataHoraAgora()
       });
 
