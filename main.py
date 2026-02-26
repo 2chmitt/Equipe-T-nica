@@ -645,3 +645,125 @@ def gerar_extrato_12m(req: Extrato12mRequest):
         media_type="application/zip",
         headers=headers
     )
+
+# =========================
+# INEX (nova aba)
+# =========================
+import calendar
+from io import BytesIO
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+
+@app.get("/inex")
+def inex_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "inex.html"))
+
+def gerar_intervalo_mensal(mes_inicio: str, mes_fim: str):
+    """
+    mes_inicio/mes_fim: "YYYY-MM"
+    retorna lista [(label "MM/YYYY", data_inicio "dd.mm.yyyy", data_fim "dd.mm.yyyy"), ...]
+    """
+    ano_i, mes_i = map(int, mes_inicio.split("-"))
+    ano_f, mes_f = map(int, mes_fim.split("-"))
+
+    out = []
+    ano, mes = ano_i, mes_i
+
+    while (ano < ano_f) or (ano == ano_f and mes <= mes_f):
+        primeiro_dia = datetime(ano, mes, 1)
+        ultimo_dia = calendar.monthrange(ano, mes)[1]
+        ultimo = datetime(ano, mes, ultimo_dia)
+
+        label = f"{mes:02d}/{ano}"
+        data_inicio = primeiro_dia.strftime("%d.%m.%Y")
+        data_fim = ultimo.strftime("%d.%m.%Y")
+
+        out.append((label, data_inicio, data_fim))
+
+        if mes == 12:
+            mes = 1
+            ano += 1
+        else:
+            mes += 1
+
+    return out
+
+class InexRequest(BaseModel):
+    tipo: str          # "fpm" ou "royalties"
+    mes_inicio: str    # "YYYY-MM"
+    mes_fim: str       # "YYYY-MM"
+    codigo: int
+    municipio: str
+    uf: str
+
+@app.post("/inex/gerar")
+def inex_gerar(req: InexRequest):
+    tipo = req.tipo.lower().strip()
+
+    if tipo == "fpm":
+        codigo_fundo = 4
+    elif tipo == "royalties":
+        codigo_fundo = 28
+    else:
+        return {"erro": "Tipo inválido"}
+
+    intervalo = gerar_intervalo_mensal(req.mes_inicio, req.mes_fim)
+    resultados = []
+
+    for label, data_inicio, data_fim in intervalo:
+        data_bb = consultar_bb(req.codigo, codigo_fundo, data_inicio, data_fim)
+        valor = extrair_credito_benef(data_bb) if (data_bb and data_bb.get("quantidadeOcorrencia")) else 0.0
+
+        resultados.append({
+            "mes": label,                 # MM/YYYY
+            "valor": round(valor, 2),     # float
+        })
+
+    # nome sugerido (sem / pra não quebrar no Windows)
+    ano_i, mes_i = req.mes_inicio.split("-")
+    ano_f, mes_f = req.mes_fim.split("-")
+    periodo_inicio = f"{mes_i}/{ano_i}"
+    periodo_fim = f"{mes_f}/{ano_f}"
+
+    filename = f"INEX - {tipo.upper()} - {req.municipio} ({req.uf}) - {periodo_inicio} a {periodo_fim}.xlsx"
+    filename = filename.replace("/", "-")  # Windows-safe
+
+    return {
+        "municipio": f"{req.municipio} ({req.uf})",
+        "tipo": tipo.upper(),
+        "periodo": f"{periodo_inicio} a {periodo_fim}",
+        "resultados": resultados,
+        "filename": filename
+    }
+
+@app.post("/inex/baixar")
+def inex_baixar(req: InexRequest):
+    # Reaproveita a mesma lógica do /inex/gerar, mas gera XLSX
+    payload = inex_gerar(req)
+    if isinstance(payload, dict) and payload.get("erro"):
+        return payload
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "INEX"
+
+    ws.append(["Mês", "Valor"])
+    for item in payload["resultados"]:
+        ws.append([item["mes"], item["valor"]])
+
+    # formata coluna Valor como moeda (Excel)
+    for row in range(2, ws.max_row + 1):
+        ws.cell(row=row, column=2).number_format = u'R$ #,##0.00'
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+
+    filename = payload.get("filename", "INEX.xlsx")
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+    return StreamingResponse(
+        bio,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers
+    )
