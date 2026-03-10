@@ -35,9 +35,52 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusEl = document.getElementById("status");
   const btnGerar = document.getElementById("btnGerar");
 
+  const selectDecendio = document.getElementById("decendio");
+
   renderHistorico();
 
+  /* ===== NAVEGAÇÃO POR TECLADO NO SELECT ===== */
+
+  selectDecendio.addEventListener("keydown", (e) => {
+
+    const total = selectDecendio.options.length;
+    let index = selectDecendio.selectedIndex;
+
+    if (e.key === "ArrowDown") {
+
+      e.preventDefault();
+      index++;
+
+      if (index >= total) index = 0;
+
+      selectDecendio.selectedIndex = index;
+
+    }
+
+    else if (e.key === "ArrowUp") {
+
+      e.preventDefault();
+      index--;
+
+      if (index < 0) index = total - 1;
+
+      selectDecendio.selectedIndex = index;
+
+    }
+
+    else if (e.key === "Enter") {
+
+      e.preventDefault();
+      form.dispatchEvent(new Event("submit"));
+
+    }
+
+  });
+
+  /* ===== SUBMIT ===== */
+
   form.addEventListener("submit", async (e) => {
+
     e.preventDefault();
 
     btnGerar.disabled = true;
@@ -63,6 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
+
       const res = await fetch("/extratos/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,19 +127,23 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // download ZIP
+      /* ===== DOWNLOAD ZIP ===== */
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = url;
       a.download = "extratos.zip";
+
       document.body.appendChild(a);
       a.click();
       a.remove();
+
       window.URL.revokeObjectURL(url);
 
-      // histórico
+      /* ===== HISTÓRICO ===== */
+
       salvarHistorico({
         tipo,
         periodo: `${payload.data_inicio} até ${payload.data_fim}`,
@@ -105,10 +153,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderHistorico();
 
-    } finally {
+    }
+
+    finally {
+
       btnGerar.disabled = false;
       statusEl.classList.add("hidden");
+
     }
+
   });
 
 });
