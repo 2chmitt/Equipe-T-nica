@@ -30,9 +30,24 @@ function renderHistorico() {
   });
 }
 
-/* ===== AUTOCOMPLETE (igual seu site) ===== */
+/* ===== AUTOCOMPLETE ===== */
 
 let timeout = null;
+
+/* ===== NOVO CONTROLE DE SETAS ===== */
+
+let indiceSelecionado = -1;
+
+function atualizarSelecao(itens) {
+
+  itens.forEach(el => el.classList.remove("ativo"));
+
+  if (indiceSelecionado >= 0 && itens[indiceSelecionado]) {
+    itens[indiceSelecionado].classList.add("ativo");
+    itens[indiceSelecionado].scrollIntoView({ block: "nearest" });
+  }
+
+}
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -49,6 +64,9 @@ document.addEventListener("DOMContentLoaded", () => {
   renderHistorico();
 
   municipioInput.addEventListener("input", () => {
+
+    indiceSelecionado = -1;
+
     clearTimeout(timeout);
 
     codigoHidden.value = "";
@@ -74,6 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       dados.forEach(m => {
+
         const li = document.createElement("li");
         li.textContent = `${m.municipio} (${m.uf})`;
 
@@ -85,11 +104,61 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         sugestoesEl.appendChild(li);
+
       });
 
       sugestoesEl.style.display = "block";
 
     }, 250);
+
+  });
+
+  /* ===== NAVEGAÇÃO POR TECLADO ===== */
+
+  municipioInput.addEventListener("keydown", (e) => {
+
+    const itens = sugestoesEl.querySelectorAll("li");
+
+    if (!itens.length) return;
+
+    if (e.key === "ArrowDown") {
+
+      e.preventDefault();
+
+      indiceSelecionado++;
+
+      if (indiceSelecionado >= itens.length) {
+        indiceSelecionado = 0;
+      }
+
+      atualizarSelecao(itens);
+
+    }
+
+    else if (e.key === "ArrowUp") {
+
+      e.preventDefault();
+
+      indiceSelecionado--;
+
+      if (indiceSelecionado < 0) {
+        indiceSelecionado = itens.length - 1;
+      }
+
+      atualizarSelecao(itens);
+
+    }
+
+    else if (e.key === "Enter") {
+
+      e.preventDefault();
+
+      if (indiceSelecionado >= 0) {
+        itens[indiceSelecionado].click();
+      }
+
+    }
+
   });
 
   document.addEventListener("click", e => {
@@ -97,6 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   form.addEventListener("submit", async (e) => {
+
     e.preventDefault();
 
     if (!codigoHidden.value) {
@@ -104,8 +174,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const mesInicio = document.getElementById("mes_inicio").value; // yyyy-mm
-    const mesFim = document.getElementById("mes_fim").value;       // yyyy-mm
+    const mesInicio = document.getElementById("mes_inicio").value;
+    const mesFim = document.getElementById("mes_fim").value;
 
     if (!mesInicio || !mesFim) {
       alert("Selecione o mês inicial e o mês final.");
@@ -127,6 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
+
       const res = await fetch("/extratos-12m/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,31 +218,28 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // download ZIP
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
 
-        // 🔥 pega nome do header enviado pelo backend
-        const contentDisposition = res.headers.get("content-disposition");
+      const contentDisposition = res.headers.get("content-disposition");
 
-        let nomeArquivo = "extrato.zip"; // fallback
+      let nomeArquivo = "extrato.zip";
 
-        if (contentDisposition && contentDisposition.includes("filename=")) {
-          const match = contentDisposition.match(/filename="(.+)"/);
-          if (match && match[1]) {
-            nomeArquivo = match[1];
-          }
+      if (contentDisposition && contentDisposition.includes("filename=")) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match && match[1]) {
+          nomeArquivo = match[1];
         }
+      }
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = nomeArquivo;   // ✅ agora usa o nome do backend
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nomeArquivo;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
 
-      // histórico
       salvarHistorico({
         tipo,
         municipio: payload.municipio,
@@ -182,10 +250,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderHistorico();
 
-    } finally {
+    }
+
+    finally {
+
       btnGerar.disabled = false;
       statusEl.classList.add("hidden");
+
     }
+
   });
 
 });
