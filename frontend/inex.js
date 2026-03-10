@@ -16,7 +16,23 @@ function getFilenameFromDisposition(res) {
 let timeout = null;
 let lastPayload = null;
 
+/* ===== CONTROLE DE NAVEGAÇÃO POR TECLADO ===== */
+
+let indiceSelecionado = -1;
+
+function atualizarSelecao(itens) {
+
+  itens.forEach(el => el.classList.remove("ativo"));
+
+  if (indiceSelecionado >= 0 && itens[indiceSelecionado]) {
+    itens[indiceSelecionado].classList.add("ativo");
+    itens[indiceSelecionado].scrollIntoView({ block: "nearest" });
+  }
+
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+
   const form = document.getElementById("formInex");
 
   const municipioInput = document.getElementById("municipioInput");
@@ -33,8 +49,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const resPeriodo = document.getElementById("res-periodo");
   const tbody = document.getElementById("inex-tbody");
 
-  // AUTOCOMPLETE (mesma lógica)
+  /* ===== AUTOCOMPLETE ===== */
+
   municipioInput.addEventListener("input", () => {
+
+    indiceSelecionado = -1;
+
     clearTimeout(timeout);
 
     codigoHidden.value = "";
@@ -49,6 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     timeout = setTimeout(async () => {
+
       const res = await fetch(`/municipios?q=${encodeURIComponent(termo)}`);
       const dados = await res.json();
 
@@ -60,6 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       dados.forEach(m => {
+
         const li = document.createElement("li");
         li.textContent = `${m.municipio} (${m.uf})`;
 
@@ -71,15 +93,68 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         sugestoesEl.appendChild(li);
+
       });
 
       sugestoesEl.style.display = "block";
+
     }, 250);
+
+  });
+
+  /* ===== NAVEGAÇÃO POR TECLADO ===== */
+
+  municipioInput.addEventListener("keydown", (e) => {
+
+    const itens = sugestoesEl.querySelectorAll("li");
+
+    if (!itens.length) return;
+
+    if (e.key === "ArrowDown") {
+
+      e.preventDefault();
+
+      indiceSelecionado++;
+
+      if (indiceSelecionado >= itens.length) {
+        indiceSelecionado = 0;
+      }
+
+      atualizarSelecao(itens);
+
+    }
+
+    else if (e.key === "ArrowUp") {
+
+      e.preventDefault();
+
+      indiceSelecionado--;
+
+      if (indiceSelecionado < 0) {
+        indiceSelecionado = itens.length - 1;
+      }
+
+      atualizarSelecao(itens);
+
+    }
+
+    else if (e.key === "Enter") {
+
+      e.preventDefault();
+
+      if (indiceSelecionado >= 0) {
+        itens[indiceSelecionado].click();
+      }
+
+    }
+
   });
 
   document.addEventListener("click", e => {
     if (!e.target.closest(".autocomplete")) fecharSugestoes(sugestoesEl);
   });
+
+  /* ===== RENDER TABELA ===== */
 
   function renderTabela(resultados) {
     tbody.innerHTML = "";
@@ -105,6 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.type = "button";
       btn.className = "btn-copy";
       btn.textContent = "📋";
+
       btn.addEventListener("click", async () => {
         await navigator.clipboard.writeText(String(item.valor));
         btn.classList.add("copiado");
@@ -121,7 +197,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /* ===== SUBMIT ===== */
+
   form.addEventListener("submit", async (e) => {
+
     e.preventDefault();
 
     if (!codigoHidden.value) {
@@ -152,6 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
+
       const res = await fetch("/inex/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -174,19 +254,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderTabela(data.resultados);
 
-    } finally {
+    }
+
+    finally {
+
       btnGerar.disabled = false;
       statusEl.classList.add("hidden");
+
     }
+
   });
 
+  /* ===== BAIXAR EXCEL ===== */
+
   btnBaixar.addEventListener("click", async () => {
+
     if (!lastPayload) return;
 
     btnBaixar.disabled = true;
     statusEl.classList.remove("hidden");
 
     try {
+
       const res = await fetch("/inex/baixar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -218,11 +307,18 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.appendChild(a);
       a.click();
       a.remove();
+
       window.URL.revokeObjectURL(url);
 
-    } finally {
+    }
+
+    finally {
+
       statusEl.classList.add("hidden");
       btnBaixar.disabled = false;
+
     }
+
   });
+
 });
