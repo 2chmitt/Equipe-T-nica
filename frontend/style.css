@@ -432,3 +432,8 @@ button:disabled{
   .bloco-left{ grid-template-columns: 92px 1fr; }
   .valor{ font-size: 18px; }
 }
+
+.sugestoes li.ativo {
+  background: rgba(202,162,58,0.20);
+  border-left: 3px solid #caa23a;
+}
