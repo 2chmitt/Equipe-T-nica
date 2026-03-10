@@ -22,7 +22,6 @@ function formatarRaw(valor) {
   }).format(valor);
 }
 
-
 function copiarTexto(texto, botao) {
   navigator.clipboard.writeText(texto).then(() => {
     botao.classList.add("copiado");
@@ -31,7 +30,6 @@ function copiarTexto(texto, botao) {
 }
 
 function normalizarMunicipio(municipio) {
-  // garante APENAS "NOME / UF"
   const partes = municipio.replace(" - ", " / ").split(" / ");
   return `${partes[0]} / ${partes[1]}`;
 }
@@ -60,7 +58,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const historicoEl = document.getElementById("historico");
 
   let historico = JSON.parse(localStorage.getItem("historico")) || [];
-  let cacheValores = {}; // <-- mantém o "valor atual da tela"
+  let cacheValores = {};
+
+  /* ===== NOVO CONTROLE DE NAVEGAÇÃO ===== */
+
+  let indiceSelecionado = -1;
+
+  function atualizarSelecao(itens) {
+
+    itens.forEach(el => el.classList.remove("ativo"));
+
+    if (indiceSelecionado >= 0 && itens[indiceSelecionado]) {
+      itens[indiceSelecionado].classList.add("ativo");
+      itens[indiceSelecionado].scrollIntoView({ block: "nearest" });
+    }
+
+  }
 
   renderHistorico();
 
@@ -78,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
     historico.forEach(item => {
       const li = document.createElement("li");
       li.textContent = `${normalizarMunicipio(item.municipio)} | ${item.periodo}`;
-      li.addEventListener("click", () => renderResultado(item)); // <-- renderResultado vai atualizar cacheValores agora
+      li.addEventListener("click", () => renderResultado(item));
       historicoEl.appendChild(li);
     });
   }
@@ -88,6 +101,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let timeout = null;
 
   municipioInput.addEventListener("input", () => {
+
+    indiceSelecionado = -1;
+
     clearTimeout(timeout);
     codigoHidden.value = "";
     ufHidden.value = "";
@@ -99,29 +115,85 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     timeout = setTimeout(async () => {
+
       const res = await fetch(`/municipios?q=${encodeURIComponent(termo)}`);
       const dados = await res.json();
 
       sugestoesEl.innerHTML = "";
+
       if (!dados || dados.length === 0) {
         fecharSugestoes();
         return;
       }
 
       dados.forEach(m => {
+
         const li = document.createElement("li");
         li.textContent = `${m.municipio} (${m.uf})`;
+
         li.addEventListener("click", () => {
           municipioInput.value = `${m.municipio} / ${m.uf}`;
           codigoHidden.value = m.codigo;
           ufHidden.value = m.uf;
           fecharSugestoes();
         });
+
         sugestoesEl.appendChild(li);
+
       });
 
       sugestoesEl.style.display = "block";
+
     }, 250);
+
+  });
+
+  /* ===== NAVEGAÇÃO POR TECLADO ===== */
+
+  municipioInput.addEventListener("keydown", (e) => {
+
+    const itens = sugestoesEl.querySelectorAll("li");
+
+    if (!itens.length) return;
+
+    if (e.key === "ArrowDown") {
+
+      e.preventDefault();
+
+      indiceSelecionado++;
+
+      if (indiceSelecionado >= itens.length) {
+        indiceSelecionado = 0;
+      }
+
+      atualizarSelecao(itens);
+
+    }
+
+    else if (e.key === "ArrowUp") {
+
+      e.preventDefault();
+
+      indiceSelecionado--;
+
+      if (indiceSelecionado < 0) {
+        indiceSelecionado = itens.length - 1;
+      }
+
+      atualizarSelecao(itens);
+
+    }
+
+    else if (e.key === "Enter") {
+
+      e.preventDefault();
+
+      if (indiceSelecionado >= 0) {
+        itens[indiceSelecionado].click();
+      }
+
+    }
+
   });
 
   function fecharSugestoes() {
@@ -136,10 +208,11 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ===== BOTÕES COPIAR ===== */
 
   document.querySelectorAll(".btn-copy").forEach(btn => {
+
     btn.addEventListener("click", () => {
+
       const tipo = btn.dataset.copy;
 
-      // 🔥 agora sempre copia o "valor atual da tela"
       if (tipo === "fpm-raw") copiarTexto(formatarRaw(cacheValores.fpm), btn);
       if (tipo === "fpm-brl") copiarTexto(formatarReal(cacheValores.fpm), btn);
 
@@ -148,12 +221,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (tipo === "todos-raw") copiarTexto(formatarRaw(cacheValores.todos), btn);
       if (tipo === "todos-brl") copiarTexto(formatarReal(cacheValores.todos), btn);
+
     });
+
   });
 
   /* ===== SUBMIT ===== */
 
   form.addEventListener("submit", async e => {
+
     e.preventDefault();
 
     if (!codigoHidden.value) {
@@ -166,6 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resMunicipio.innerText = "Consultando…";
     resPeriodo.innerText = "";
+
     valorFpm.innerText = "—";
     valorRoyalties.innerText = "—";
     valorTodos.innerText = "—";
@@ -179,6 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
+
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,15 +268,21 @@ document.addEventListener("DOMContentLoaded", () => {
       renderResultado(data);
       salvarNoHistorico(data);
 
-    } finally {
+    }
+
+    finally {
+
       statusEl.classList.add("hidden");
       btnConsultar.disabled = false;
+
     }
+
   });
 
   /* ===== RENDER RESULTADO ===== */
+
   function renderResultado(data) {
-    // ✅ atualização crítica: cacheValores deve refletir O QUE ESTÁ NA TELA
+
     cacheValores = {
       fpm: data.fpm,
       royalties: data.royalties,
@@ -211,6 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
     valorFpm.innerText = formatarReal(data.fpm);
     valorRoyalties.innerText = formatarReal(data.royalties);
     valorTodos.innerText = formatarReal(data.todos);
+
   }
 
 });
