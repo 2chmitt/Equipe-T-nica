@@ -217,11 +217,17 @@ MUNICIPIOS_FPM_EXTRATO = [
     {"codigo": 3385, "municipio": "HUMAITA", "uf": "AM", "coef": "3,0"},
     {"codigo": 362, "municipio": "ALVARAES", "uf": "AM", "coef": "1,4"},
     {"codigo": 7338, "municipio": "SAO GABRIEL DA CACHOEIRA", "uf": "AM", "coef": "2,8"},
+
     {"codigo": 972, "municipio": "BARREIRINHAS", "uf": "MA", "coef": "2,4"},
     {"codigo": 11085, "municipio": "ITAIPAVA DO GRAJAU", "uf": "MA", "coef": "1,0"},
     {"codigo": 8519, "municipio": "URBANO SANTOS", "uf": "MA", "coef": "1,6"},
     {"codigo": 8418, "municipio": "TUNTUM", "uf": "MA", "coef": "1,8"},
     {"codigo": 3495, "municipio": "ICATU", "uf": "MA", "coef": "1,4"},
+
+    # 🔥 NOVOS MUNICÍPIOS
+    {"codigo": 6759, "municipio": "ROSARIO", "uf": "MA", "coef": "1,8"},
+    {"codigo": 11076, "municipio": "DAVINOPOLIS", "uf": "MA", "coef": "1,0"},
+    {"codigo": 7295, "municipio": "SAO DOMINGOS DO MARANHAO", "uf": "MA", "coef": "2,2"},
 ]
 
 # =========================
