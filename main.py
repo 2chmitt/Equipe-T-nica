@@ -416,13 +416,13 @@ def gerar_extrato_lote(req: ExtratoLoteRequest):
             if tipo == "fpm":
                 # ex: 2° Decêndio de JANEIRO DE 2026 - ALVARAES (AM) (1,4 Coef.).pdf
                 if coef:
-                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}) ({coef} Coef.).pdf"
+                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} de {ano_nome} - {municipio} ({uf}) ({coef} Coef.).pdf"
                 else:
-                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}).pdf"
+                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} de {ano_nome} - {municipio} ({uf}).pdf"
 
             else:
                 # royalties não tem coef
-                nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}).pdf"
+                nome_pdf = f"{req.decendio} Parcela dos {mes_nome} de {ano_nome} - {municipio} ({uf}).pdf"
 
             nome_pdf = nome_pdf.replace("/", "-")
 
