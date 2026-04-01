@@ -227,7 +227,7 @@ MUNICIPIOS_FPM_EXTRATO = [
     # 🔥 NOVOS MUNICÍPIOS
     {"codigo": 6759, "municipio": "ROSARIO", "uf": "MA", "coef": "1,8"},
     {"codigo": 11076, "municipio": "DAVINOPOLIS", "uf": "MA", "coef": "1,0"},
-    {"codigo": 7295, "municipio": "SAO DOMINGOS DO MARANHAO", "uf": "MA", "coef": "2,2"},
+    {"codigo": 7295, "municipio": "SAO DOMINGOS DO MARANHAO", "uf": "MA", "coef": "1,8"},
 ]
 
 # =========================
