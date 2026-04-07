@@ -437,3 +437,12 @@ button:disabled{
   background: rgba(202,162,58,0.20);
   border-left: 3px solid #caa23a;
 }
+
+.btn-extrato{
+  font-size: 12px;
+}
+
+.btn-extrato:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+}
