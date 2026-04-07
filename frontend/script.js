@@ -57,8 +57,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const historicoEl = document.getElementById("historico");
 
+  const btnExtratoFpm = document.getElementById("btnExtratoFpm");
+  const btnExtratoRoyalties = document.getElementById("btnExtratoRoyalties");
+  const btnExtratoTodos = document.getElementById("btnExtratoTodos");
+
   let historico = JSON.parse(localStorage.getItem("historico")) || [];
   let cacheValores = {};
+
+  if (btnExtratoFpm) btnExtratoFpm.disabled = true;
+  if (btnExtratoRoyalties) btnExtratoRoyalties.disabled = true;
+  if (btnExtratoTodos) btnExtratoTodos.disabled = true;
 
   /* ===== NOVO CONTROLE DE NAVEGAÇÃO ===== */
 
@@ -226,6 +234,85 @@ document.addEventListener("DOMContentLoaded", () => {
 
   });
 
+  if (btnExtratoFpm) {
+    btnExtratoFpm.addEventListener("click", () => gerarExtrato("fpm", btnExtratoFpm));
+  }
+
+  if (btnExtratoRoyalties) {
+    btnExtratoRoyalties.addEventListener("click", () => gerarExtrato("royalties", btnExtratoRoyalties));
+  }
+
+  if (btnExtratoTodos) {
+    btnExtratoTodos.addEventListener("click", () => gerarExtrato("todos", btnExtratoTodos));
+  }
+
+  async function gerarExtrato(tipo, botao) {
+    if (!codigoHidden.value) {
+      alert("Selecione um município");
+      return;
+    }
+
+    const dataInicio = document.getElementById("data_inicio").value;
+    const dataFim = document.getElementById("data_fim").value;
+
+    if (!dataInicio || !dataFim) {
+      alert("Informe o período.");
+      return;
+    }
+
+    const nomeMunicipio = municipioInput.value.includes(" / ")
+      ? municipioInput.value.split(" / ")[0].trim()
+      : municipioInput.value.trim();
+
+    const payload = {
+      tipo,
+      codigo: Number(codigoHidden.value),
+      nome: nomeMunicipio,
+      uf: ufHidden.value,
+      data_inicio: isoParaPonto(dataInicio),
+      data_fim: isoParaPonto(dataFim)
+    };
+
+    try {
+      botao.disabled = true;
+
+      const res = await fetch("/consulta/extrato", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!res.ok) {
+        if (contentType.includes("application/json")) {
+          const erro = await res.json();
+          throw new Error(erro.erro || "Erro ao gerar extrato.");
+        }
+        throw new Error("Erro ao gerar extrato.");
+      }
+
+      if (contentType.includes("application/json")) {
+        const erro = await res.json();
+        throw new Error(erro.erro || "Não foi possível gerar o extrato.");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 5000);
+
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Não foi possível gerar o extrato.");
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
   /* ===== SUBMIT ===== */
 
   form.addEventListener("submit", async e => {
@@ -295,6 +382,10 @@ document.addEventListener("DOMContentLoaded", () => {
     valorFpm.innerText = formatarReal(data.fpm);
     valorRoyalties.innerText = formatarReal(data.royalties);
     valorTodos.innerText = formatarReal(data.todos);
+
+    if (btnExtratoFpm) btnExtratoFpm.disabled = false;
+    if (btnExtratoRoyalties) btnExtratoRoyalties.disabled = false;
+    if (btnExtratoTodos) btnExtratoTodos.disabled = false;
 
   }
 
