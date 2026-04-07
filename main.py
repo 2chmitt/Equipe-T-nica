@@ -175,6 +175,54 @@ def consultar(consulta: Consulta):
         "todos": round(todos, 2)
     }
 
+# =========================
+# EXTRATO INDIVIDUAL - CONSULTA
+# =========================
+class ExtratoConsultaRequest(BaseModel):
+    tipo: str          # "fpm", "royalties" ou "todos"
+    codigo: int
+    nome: str
+    uf: str
+    data_inicio: str
+    data_fim: str
+
+
+@app.post("/consulta/extrato")
+def gerar_extrato_consulta(req: ExtratoConsultaRequest):
+    tipo = req.tipo.lower().strip()
+
+    if tipo == "fpm":
+        codigo_fundo = 4
+        titulo_fundo = "FPM - FUNDO DE PARTICIPACAO DOS MUNICIPIOS"
+    elif tipo == "royalties":
+        codigo_fundo = 28
+        titulo_fundo = "ANP   - ROYALTIES DA ANP"
+    elif tipo == "todos":
+        codigo_fundo = 0
+        titulo_fundo = "TODOS OS FUNDOS"
+    else:
+        return {"erro": "Tipo inválido"}
+
+    data_bb = consultar_bb(req.codigo, codigo_fundo, req.data_inicio, req.data_fim)
+
+    if not data_bb or not data_bb.get("quantidadeOcorrencia"):
+        return {"erro": "Nenhum dado encontrado para gerar o extrato."}
+
+    pdf_buffer = gerar_pdf_formatado_com_estilo(data_bb, titulo_fundo)
+
+    nome_arquivo = f"Extrato {tipo.upper()} - {req.nome} ({req.uf}) - {req.data_inicio} a {req.data_fim}.pdf"
+    nome_arquivo = nome_arquivo.replace("/", "-")
+
+    headers = {
+        "Content-Disposition": f'inline; filename="{nome_arquivo}"'
+    }
+
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers=headers
+    )
+
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 from reportlab.lib import colors
@@ -217,17 +265,11 @@ MUNICIPIOS_FPM_EXTRATO = [
     {"codigo": 3385, "municipio": "HUMAITA", "uf": "AM", "coef": "3,0"},
     {"codigo": 362, "municipio": "ALVARAES", "uf": "AM", "coef": "1,4"},
     {"codigo": 7338, "municipio": "SAO GABRIEL DA CACHOEIRA", "uf": "AM", "coef": "2,8"},
-
     {"codigo": 972, "municipio": "BARREIRINHAS", "uf": "MA", "coef": "2,4"},
     {"codigo": 11085, "municipio": "ITAIPAVA DO GRAJAU", "uf": "MA", "coef": "1,0"},
     {"codigo": 8519, "municipio": "URBANO SANTOS", "uf": "MA", "coef": "1,6"},
     {"codigo": 8418, "municipio": "TUNTUM", "uf": "MA", "coef": "1,8"},
     {"codigo": 3495, "municipio": "ICATU", "uf": "MA", "coef": "1,4"},
-
-    # 🔥 NOVOS MUNICÍPIOS
-    {"codigo": 6759, "municipio": "ROSARIO", "uf": "MA", "coef": "1,8"},
-    {"codigo": 11076, "municipio": "DAVINOPOLIS", "uf": "MA", "coef": "1,0"},
-    {"codigo": 7295, "municipio": "SAO DOMINGOS DO MARANHAO", "uf": "MA", "coef": "1,8"},
 ]
 
 # =========================
@@ -416,13 +458,13 @@ def gerar_extrato_lote(req: ExtratoLoteRequest):
             if tipo == "fpm":
                 # ex: 2° Decêndio de JANEIRO DE 2026 - ALVARAES (AM) (1,4 Coef.).pdf
                 if coef:
-                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} de {ano_nome} - {municipio} ({uf}) ({coef} Coef.).pdf"
+                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}) ({coef} Coef.).pdf"
                 else:
-                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} de {ano_nome} - {municipio} ({uf}).pdf"
+                    nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}).pdf"
 
             else:
                 # royalties não tem coef
-                nome_pdf = f"{req.decendio} Parcela dos {mes_nome} de {ano_nome} - {municipio} ({uf}).pdf"
+                nome_pdf = f"{req.decendio} Decêndio de {mes_nome} DE {ano_nome} - {municipio} ({uf}).pdf"
 
             nome_pdf = nome_pdf.replace("/", "-")
 
