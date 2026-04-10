@@ -270,6 +270,9 @@ MUNICIPIOS_FPM_EXTRATO = [
     {"codigo": 8519, "municipio": "URBANO SANTOS", "uf": "MA", "coef": "1,6"},
     {"codigo": 8418, "municipio": "TUNTUM", "uf": "MA", "coef": "1,8"},
     {"codigo": 3495, "municipio": "ICATU", "uf": "MA", "coef": "1,4"},
+    {"codigo": 7295, "municipio": "SAO DOMINGOS DO MARANHAO", "uf": "MA", "coef": "1,8"},
+    {"codigo": 6759, "municipio": "ROSARIO", "uf": "MA", "coef": "1,8"},
+    {"codigo": 11076, "municipio": "DAVINOPOLIS", "uf": "MA", "coef": "1,0"},
 ]
 
 # =========================
