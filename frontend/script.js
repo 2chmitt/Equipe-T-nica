@@ -47,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const resMunicipio = document.getElementById("res-municipio");
   const resPeriodo = document.getElementById("res-periodo");
+  const resIbge2010 = document.getElementById("res-ibge-2010");
 
   const valorFpm = document.getElementById("valor-fpm");
   const valorRoyalties = document.getElementById("valor-royalties");
@@ -329,14 +330,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resMunicipio.innerText = "Consultando…";
     resPeriodo.innerText = "";
+    resIbge2010.innerText = "—";
 
     valorFpm.innerText = "—";
     valorRoyalties.innerText = "—";
     valorTodos.innerText = "—";
 
+    const nomeMunicipio = municipioInput.value.includes(" / ")
+      ? municipioInput.value.split(" / ")[0].trim()
+      : municipioInput.value.trim();
+
     const payload = {
       codigo: Number(codigoHidden.value),
-      nome: municipioInput.value,
+      nome: nomeMunicipio,
       uf: ufHidden.value,
       data_inicio: isoParaPonto(document.getElementById("data_inicio").value),
       data_fim: isoParaPonto(document.getElementById("data_fim").value)
@@ -378,6 +384,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resMunicipio.innerText = normalizarMunicipio(data.municipio);
     resPeriodo.innerText = data.periodo;
+
+    if (data.ibge_2010 && data.ibge_2010.populacao_residente_2010) {
+      resIbge2010.innerText = new Intl.NumberFormat("pt-BR").format(
+        data.ibge_2010.populacao_residente_2010
+      );
+    } else {
+      resIbge2010.innerText = "Não encontrada";
+    }
 
     valorFpm.innerText = formatarReal(data.fpm);
     valorRoyalties.innerText = formatarReal(data.royalties);
