@@ -186,22 +186,32 @@ def buscar_populacao_ibge_2010(nome_municipio: str, uf: str) -> dict:
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage"]
+            )
             page = browser.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            page.wait_for_timeout(2500)
+
+            page.goto(url, wait_until="domcontentloaded", timeout=90000)
+            page.wait_for_load_state("networkidle", timeout=30000)
+            page.wait_for_timeout(5000)
 
             texto = page.locator("body").inner_text()
+            titulo = page.title()
+
             browser.close()
 
-        texto = re.sub(r"\s+", " ", texto.upper())
-        match = re.search(r"POPULA[CÇ][AÃ]O RESIDENTE\s+([\d\.\,]+)", texto)
+        texto_limpo = re.sub(r"\s+", " ", texto.upper())
+        match = re.search(r"POPULA[CÇ][AÃ]O RESIDENTE\s+([\d\.\,]+)", texto_limpo)
 
         if not match:
             return {
                 "sucesso": False,
                 "url": url,
-                "populacao_residente_2010": None
+                "populacao_residente_2010": None,
+                "erro": "Texto 'POPULAÇÃO RESIDENTE' não encontrado",
+                "titulo_pagina": titulo,
+                "amostra_texto": texto[:800]
             }
 
         valor = match.group(1).replace(".", "").replace(",", "")
@@ -210,14 +220,17 @@ def buscar_populacao_ibge_2010(nome_municipio: str, uf: str) -> dict:
         return {
             "sucesso": populacao is not None,
             "url": url,
-            "populacao_residente_2010": populacao
+            "populacao_residente_2010": populacao,
+            "erro": None,
+            "titulo_pagina": titulo
         }
 
-    except Exception:
+    except Exception as e:
         return {
             "sucesso": False,
             "url": url,
-            "populacao_residente_2010": None
+            "populacao_residente_2010": None,
+            "erro": f"{type(e).__name__}: {str(e)}"
         }
 
 # =========================
