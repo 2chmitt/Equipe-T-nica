@@ -8,6 +8,8 @@ import urllib3
 import re
 import os
 import json
+import unicodedata
+from playwright.sync_api import sync_playwright
 
 urllib3.disable_warnings()
 
@@ -28,7 +30,7 @@ app.add_middleware(
 # =========================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-MUNICIPIOS_PATH = os.path.join(BASE_DIR, "municipios.json")
+MUNICIPIOS_PATH = os.path.join(BASE_DIR, "municipios_limpo.json")
 
 # =========================
 # LOAD MUNICIPIOS
@@ -146,6 +148,79 @@ def extrair_credito_benef(json_data):
     return 0.0
 
 # =========================
+# FUNÇÕES IBGE 2010
+# =========================
+def limpar_nome_bb(nome: str) -> str:
+    nome = nome.strip().upper()
+
+    prefixos = [
+        "PM MUNICIPIO DE ",
+        "PREFEITURA MUNICIPAL DE ",
+        "PREF MUN DE ",
+        "MUNICIPIO DE ",
+        "PM ",
+    ]
+
+    for prefixo in prefixos:
+        if nome.startswith(prefixo):
+            nome = nome[len(prefixo):]
+
+    nome = nome.replace("(CAPITAL)", "")
+    nome = re.sub(r"\s+", " ", nome).strip()
+    return nome
+
+def slug_municipio(nome: str) -> str:
+    nome = limpar_nome_bb(nome).lower()
+    nome = unicodedata.normalize("NFD", nome)
+    nome = "".join(c for c in nome if unicodedata.category(c) != "Mn")
+    nome = re.sub(r"[^a-z0-9\s-]", "", nome)
+    nome = re.sub(r"\s+", "-", nome)
+    nome = re.sub(r"-+", "-", nome)
+    return nome.strip("-")
+
+def montar_url_ibge(uf: str, nome_municipio: str) -> str:
+    return f"https://cidades.ibge.gov.br/brasil/{uf.lower()}/{slug_municipio(nome_municipio)}/pesquisa/23/27652"
+
+def buscar_populacao_ibge_2010(nome_municipio: str, uf: str) -> dict:
+    url = montar_url_ibge(uf, nome_municipio)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(2500)
+
+            texto = page.locator("body").inner_text()
+            browser.close()
+
+        texto = re.sub(r"\s+", " ", texto.upper())
+        match = re.search(r"POPULA[CÇ][AÃ]O RESIDENTE\s+([\d\.\,]+)", texto)
+
+        if not match:
+            return {
+                "sucesso": False,
+                "url": url,
+                "populacao_residente_2010": None
+            }
+
+        valor = match.group(1).replace(".", "").replace(",", "")
+        populacao = int(valor) if valor.isdigit() else None
+
+        return {
+            "sucesso": populacao is not None,
+            "url": url,
+            "populacao_residente_2010": populacao
+        }
+
+    except Exception:
+        return {
+            "sucesso": False,
+            "url": url,
+            "populacao_residente_2010": None
+        }
+
+# =========================
 # CONSULTA
 # =========================
 @app.post("/consulta")
@@ -167,12 +242,15 @@ def consultar(consulta: Consulta):
         consultar_bb(consulta.codigo, CODIGO_TODOS, consulta.data_inicio, consulta.data_fim)
     )
 
+    ibge_2010 = buscar_populacao_ibge_2010(consulta.nome, consulta.uf)
+
     return {
         "municipio": f"{consulta.nome} - {consulta.uf}",
         "periodo": f"{consulta.data_inicio} até {consulta.data_fim}",
         "fpm": round(fpm, 2),
         "royalties": round(royalties, 2),
-        "todos": round(todos, 2)
+        "todos": round(todos, 2),
+        "ibge_2010": ibge_2010
     }
 
 # =========================
