@@ -30,7 +30,7 @@ app.add_middleware(
 # =========================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-MUNICIPIOS_PATH = os.path.join(BASE_DIR, "municipios_limpo.json")
+MUNICIPIOS_PATH = os.path.join(BASE_DIR, "municipios.json")
 
 # =========================
 # LOAD MUNICIPIOS
