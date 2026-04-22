@@ -4,3 +4,4 @@ requests
 urllib3
 reportlab
 openpyxl
+playwright
