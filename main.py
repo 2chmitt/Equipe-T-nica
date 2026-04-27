@@ -731,9 +731,6 @@ def gerar_extrato_12m(req: Extrato12mRequest):
 
     datas = gerar_datas_por_mes(req.mes_inicio, req.mes_fim)
 
-    if len(datas) != 12:
-        return {"erro": f"O período deve ter exatamente 12 meses. Você selecionou {len(datas)} mês(es)."}
-
     meses_abrev = [
         "jan", "fev", "mar", "abr", "mai", "jun",
         "jul", "ago", "set", "out", "nov", "dez"
