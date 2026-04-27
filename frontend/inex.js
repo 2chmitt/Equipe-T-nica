@@ -15,20 +15,15 @@ function getFilenameFromDisposition(res) {
 
 let timeout = null;
 let lastPayload = null;
-
-/* ===== CONTROLE DE NAVEGAÇÃO POR TECLADO ===== */
-
 let indiceSelecionado = -1;
 
 function atualizarSelecao(itens) {
-
   itens.forEach(el => el.classList.remove("ativo"));
 
   if (indiceSelecionado >= 0 && itens[indiceSelecionado]) {
     itens[indiceSelecionado].classList.add("ativo");
     itens[indiceSelecionado].scrollIntoView({ block: "nearest" });
   }
-
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -43,13 +38,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusEl = document.getElementById("status");
   const btnGerar = document.getElementById("btnGerar");
   const btnBaixar = document.getElementById("btnBaixar");
+  const btnBaixarZip = document.getElementById("btnBaixarZip");
 
   const resMunicipio = document.getElementById("res-municipio");
   const resTipo = document.getElementById("res-tipo");
   const resPeriodo = document.getElementById("res-periodo");
   const tbody = document.getElementById("inex-tbody");
 
-  /* ===== AUTOCOMPLETE ===== */
+  function resetDownloads() {
+    lastPayload = null;
+    btnBaixar.disabled = true;
+    btnBaixarZip.disabled = true;
+  }
 
   municipioInput.addEventListener("input", () => {
 
@@ -59,10 +59,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     codigoHidden.value = "";
     ufHidden.value = "";
-    lastPayload = null;
-    btnBaixar.disabled = true;
+    resetDownloads();
 
     const termo = municipioInput.value.trim();
+
     if (termo.length < 2) {
       fecharSugestoes(sugestoesEl);
       return;
@@ -101,8 +101,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 250);
 
   });
-
-  /* ===== NAVEGAÇÃO POR TECLADO ===== */
 
   municipioInput.addEventListener("keydown", (e) => {
 
@@ -154,8 +152,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!e.target.closest(".autocomplete")) fecharSugestoes(sugestoesEl);
   });
 
-  /* ===== RENDER TABELA ===== */
-
   function renderTabela(resultados) {
     tbody.innerHTML = "";
 
@@ -197,7 +193,51 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ===== SUBMIT ===== */
+  function montarPayload() {
+    return {
+      tipo: document.getElementById("tipo").value,
+      mes_inicio: document.getElementById("mes_inicio").value,
+      mes_fim: document.getElementById("mes_fim").value,
+      codigo: Number(codigoHidden.value),
+      municipio: municipioInput.value.split(" / ")[0],
+      uf: ufHidden.value
+    };
+  }
+
+  async function baixarArquivo(endpoint, payload, fallbackName, expectedContentType) {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const contentType = res.headers.get("content-type") || "";
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.erro || "Erro ao baixar arquivo.");
+      return;
+    }
+
+    if (!contentType.includes(expectedContentType)) {
+      const err = await res.json();
+      alert(err.erro || "Resposta inesperada do servidor.");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = getFilenameFromDisposition(res) || fallbackName;
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+  }
 
   form.addEventListener("submit", async (e) => {
 
@@ -210,7 +250,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const mesInicio = document.getElementById("mes_inicio").value;
     const mesFim = document.getElementById("mes_fim").value;
-    const tipo = document.getElementById("tipo").value;
 
     if (!mesInicio || !mesFim) {
       alert("Selecione mês inicial e mês final.");
@@ -219,16 +258,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     btnGerar.disabled = true;
     statusEl.classList.remove("hidden");
-    btnBaixar.disabled = true;
+    resetDownloads();
 
-    const payload = {
-      tipo,
-      mes_inicio: mesInicio,
-      mes_fim: mesFim,
-      codigo: Number(codigoHidden.value),
-      municipio: municipioInput.value.split(" / ")[0],
-      uf: ufHidden.value
-    };
+    const payload = montarPayload();
 
     try {
 
@@ -247,6 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       lastPayload = payload;
       btnBaixar.disabled = false;
+      btnBaixarZip.disabled = false;
 
       resMunicipio.textContent = data.municipio || "—";
       resTipo.textContent = data.tipo || "—";
@@ -265,8 +298,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   });
 
-  /* ===== BAIXAR EXCEL ===== */
-
   btnBaixar.addEventListener("click", async () => {
 
     if (!lastPayload) return;
@@ -276,39 +307,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
 
-      const res = await fetch("/inex/baixar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lastPayload)
-      });
-
-      const contentType = res.headers.get("content-type") || "";
-
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.erro || "Erro ao baixar Excel.");
-        return;
-      }
-
-      if (!contentType.includes("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
-        alert("Resposta inesperada (não veio XLSX).");
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-
-      const fname = getFilenameFromDisposition(res) || "INEX.xlsx";
-      a.download = fname;
-
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      window.URL.revokeObjectURL(url);
+      await baixarArquivo(
+        "/inex/baixar",
+        lastPayload,
+        "INEX.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
 
     }
 
@@ -316,6 +320,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
       statusEl.classList.add("hidden");
       btnBaixar.disabled = false;
+
+    }
+
+  });
+
+  btnBaixarZip.addEventListener("click", async () => {
+
+    if (!lastPayload) return;
+
+    btnBaixarZip.disabled = true;
+    statusEl.classList.remove("hidden");
+
+    try {
+
+      await baixarArquivo(
+        "/inex/baixar-zip",
+        lastPayload,
+        "Extratos.zip",
+        "application/zip"
+      );
+
+    }
+
+    finally {
+
+      statusEl.classList.add("hidden");
+      btnBaixarZip.disabled = false;
 
     }
 
