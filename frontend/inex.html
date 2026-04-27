@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>INEX</title>
+  <title>Gerador de Extratos</title>
 
   <link rel="icon" type="image/png" href="/static/imagem1.png" />
   <link rel="apple-touch-icon" href="/static/imagem1.png" />
@@ -19,9 +19,8 @@
 
     <nav class="menu">
       <a href="/" class="menu-link">Consulta</a>
-      <a href="/extratos" class="menu-link">Extratos</a>
-      <a href="/extratos-12m" class="menu-link">12 meses</a>
-      <a href="/inex" class="menu-link ativo">INEX</a>
+      <a href="/extratos" class="menu-link">Pagamentos</a>
+      <a href="/inex" class="menu-link ativo">Gerador de Extratos</a>
     </nav>
   </div>
 </header>
@@ -29,7 +28,7 @@
 <main class="page">
 
   <section class="card form-card">
-    <h2>INEX (mês a mês)</h2>
+    <h2>Gerador de Extratos</h2>
 
     <form id="formInex">
 
@@ -63,6 +62,7 @@
       <div class="actions inex-actions">
         <button type="submit" id="btnGerar">Gerar</button>
         <button type="button" id="btnBaixar" class="btn-sec" disabled>Baixar Excel</button>
+        <button type="button" id="btnBaixarZip" class="btn-sec" disabled>Baixar ZIP</button>
       </div>
 
       <div id="status" class="status hidden">Gerando…</div>
