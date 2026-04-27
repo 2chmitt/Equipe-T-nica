@@ -186,32 +186,22 @@ def buscar_populacao_ibge_2010(nome_municipio: str, uf: str) -> dict:
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage"]
-            )
+            browser = p.chromium.launch(headless=True)
             page = browser.new_page()
-
-            page.goto(url, wait_until="domcontentloaded", timeout=90000)
-            page.wait_for_load_state("networkidle", timeout=30000)
-            page.wait_for_timeout(5000)
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(2500)
 
             texto = page.locator("body").inner_text()
-            titulo = page.title()
-
             browser.close()
 
-        texto_limpo = re.sub(r"\s+", " ", texto.upper())
-        match = re.search(r"POPULA[CÇ][AÃ]O RESIDENTE\s+([\d\.\,]+)", texto_limpo)
+        texto = re.sub(r"\s+", " ", texto.upper())
+        match = re.search(r"POPULA[CÇ][AÃ]O RESIDENTE\s+([\d\.\,]+)", texto)
 
         if not match:
             return {
                 "sucesso": False,
                 "url": url,
-                "populacao_residente_2010": None,
-                "erro": "Texto 'POPULAÇÃO RESIDENTE' não encontrado",
-                "titulo_pagina": titulo,
-                "amostra_texto": texto[:800]
+                "populacao_residente_2010": None
             }
 
         valor = match.group(1).replace(".", "").replace(",", "")
@@ -220,17 +210,14 @@ def buscar_populacao_ibge_2010(nome_municipio: str, uf: str) -> dict:
         return {
             "sucesso": populacao is not None,
             "url": url,
-            "populacao_residente_2010": populacao,
-            "erro": None,
-            "titulo_pagina": titulo
+            "populacao_residente_2010": populacao
         }
 
-    except Exception as e:
+    except Exception:
         return {
             "sucesso": False,
             "url": url,
-            "populacao_residente_2010": None,
-            "erro": f"{type(e).__name__}: {str(e)}"
+            "populacao_residente_2010": None
         }
 
 # =========================
@@ -904,5 +891,67 @@ def inex_baixar(req: InexRequest):
     return StreamingResponse(
         bio,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers
+    )
+
+@app.post("/inex/baixar-zip")
+def inex_baixar_zip(req: InexRequest):
+    tipo = req.tipo.lower().strip()
+
+    if tipo == "fpm":
+        codigo_fundo = 4
+        titulo_fundo = "FPM - FUNDO DE PARTICIPACAO DOS MUNICIPIOS"
+    elif tipo == "royalties":
+        codigo_fundo = 28
+        titulo_fundo = "ANP   - ROYALTIES DA ANP"
+    else:
+        return {"erro": "Tipo inválido"}
+
+    datas = gerar_datas_por_mes(req.mes_inicio, req.mes_fim)
+
+    meses_abrev = [
+        "jan", "fev", "mar", "abr", "mai", "jun",
+        "jul", "ago", "set", "out", "nov", "dez"
+    ]
+
+    zip_buffer = BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for index, (label, data_inicio, data_fim) in enumerate(datas, start=1):
+
+            data_bb = consultar_bb(req.codigo, codigo_fundo, data_inicio, data_fim)
+
+            if not data_bb or not data_bb.get("quantidadeOcorrencia"):
+                continue
+
+            pdf_buffer = gerar_pdf_formatado_com_estilo(data_bb, titulo_fundo)
+
+            dia, mes, ano = data_inicio.split(".")
+            mes_formatado = meses_abrev[int(mes) - 1]
+            ano_curto = ano[-2:]
+
+            nome_pdf = f"{index}- {req.municipio} ({req.uf}) - {mes_formatado}-{ano_curto}.pdf"
+            nome_pdf = nome_pdf.replace("/", "-")
+
+            zipf.writestr(nome_pdf, pdf_buffer.getvalue())
+
+    zip_buffer.seek(0)
+
+    ano_i, mes_i = req.mes_inicio.split("-")
+    ano_f, mes_f = req.mes_fim.split("-")
+
+    periodo_inicio = f"{mes_i}-{ano_i}"
+    periodo_fim = f"{mes_f}-{ano_f}"
+
+    nome_zip = f"Extratos {tipo.upper()} - {req.municipio} ({req.uf}) - {periodo_inicio} a {periodo_fim}.zip"
+    nome_zip = nome_zip.replace("/", "-")
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="{nome_zip}"'
+    }
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
         headers=headers
     )
