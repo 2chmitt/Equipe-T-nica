@@ -178,7 +178,8 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.textContent = "📋";
 
       btn.addEventListener("click", async () => {
-        await navigator.clipboard.writeText(String(item.valor));
+        await navigator.clipboard.writeText(
+  Number(item.valor).toFixed(2).replace(".", ","));
         btn.classList.add("copiado");
         setTimeout(() => btn.classList.remove("copiado"), 800);
       });
